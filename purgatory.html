@@ -21,6 +21,34 @@
             color: var(--text-light);
         }
         
+
+        /* Adjust the district card to properly fit the background image */
+.district {
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: transform 0.3s;
+    display: flex;
+    flex-direction: column;
+    height: 400px;
+    position: relative;
+    background-size: cover; /* This ensures the image covers the entire area */
+    background-position: center; /* Centers the image */
+    background-repeat: no-repeat; /* Prevents repeating */
+}
+
+/* Add this if you want to ensure the overlay properly covers the background */
+.district-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5); /* Semi-transparent dark overlay for better readability */
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
         .app-container {
             display: flex;
             flex-direction: column;
@@ -153,67 +181,70 @@
             border-radius: 4px;
         }
         
-        #city {
-            flex-grow: 1;
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 1.5rem;
-            max-height: calc(100vh - 200px);
-            overflow-y: auto;
-            padding-right: 1rem;
-        }
-        
-        .district {
-            border-radius: 10px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            transition: transform 0.3s;
-            display: flex;
-            flex-direction: column;
-            height: 400px;
-            position: relative;
-            background-size: cover;
-            background-position: center;
-        }
-        
-        .district:hover {
-            transform: translateY(-5px);
-        }
-        
-        .district-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: var(--overlay-color);
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-        
-        .district-header {
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .district h3 {
-            margin: 0;
-            color: white;
-            font-size: 1.4rem;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-        }
-        
-        .denizens-container {
-            padding: 1rem;
-            overflow-y: auto;
-            flex-grow: 1;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1rem;
-            align-content: flex-start;
-        }
-        
+ /* Make district cards wider */
+#city {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(700px, 1fr)); /* Wider cards */
+    gap: 1.5rem;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    padding-right: 1rem;
+}
+
+/* Set up horizontal scroll for denizens container */
+.denizens-container {
+    padding: 1rem;
+    flex-grow: 1;
+    display: flex;
+    flex-wrap: nowrap; /* Prevent wrapping to next line */
+    gap: 1rem;
+    overflow-x: auto; /* Horizontal scrolling */
+    align-items: center; /* Center items vertically */
+    justify-content: flex-start;
+}
+
+/* Adjust denizen cards for horizontal layout */
+.denizen {
+    min-width: 120px; /* Fixed minimum width */
+    flex: 0 0 auto; /* Prevent shrinking */
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: all 0.2s;
+    backdrop-filter: blur(3px);
+    max-width: 200px;
+}
+
+/* Add some styling for the horizontal scrollbar */
+.denizens-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.denizens-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+
+.denizens-container::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 4px;
+}
+
+/* For mobile responsiveness */
+@media (max-width: 768px) {
+    #city {
+        grid-template-columns: 1fr;
+    }
+    
+    .denizen {
+        min-width: 100px;
+    }
+}     
         .denizen {
             width: calc(50% - 0.5rem);
             background-color: rgba(255, 255, 255, 0.1);
@@ -324,6 +355,7 @@
                     </select>
                 </div>
                 <button id="refresh-now">Refresh Now</button>
+                <button id="pause-button">Pause</button>
             </div>
         </header>
         
@@ -502,5 +534,48 @@
             updateActivity();
         });
     </script>
+
+<script>
+    // Add these variables at the top with the other declarations
+    let isPaused = false;
+    const pauseButton = document.getElementById('pause-button');
+    
+    function togglePause() {
+        isPaused = !isPaused;
+        
+        if (isPaused) {
+            // If pausing, clear the interval
+            clearInterval(refreshInterval);
+            pauseButton.textContent = 'Resume';
+            pauseButton.style.backgroundColor = '#f87171'; // Light red color
+        } else {
+            // If resuming, restart the interval and do an immediate update
+            setRefreshRate();
+            pauseButton.textContent = 'Pause';
+            pauseButton.style.backgroundColor = ''; // Reset to default accent color
+        }
+    }
+    
+    // Modify the setRefreshRate function to check for paused state
+    function setRefreshRate() {
+        const rate = document.getElementById('refresh').value;
+        clearInterval(refreshInterval);
+        
+        // Only set a new interval if not paused
+        if (!isPaused) {
+            refreshInterval = setInterval(updateActivity, parseInt(rate));
+        }
+    }
+    
+    // Add this to your DOMContentLoaded event listener
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('refresh').addEventListener('change', setRefreshRate);
+        document.getElementById('refresh-now').addEventListener('click', updateActivity);
+        document.getElementById('pause-button').addEventListener('click', togglePause);
+        
+        setRefreshRate();
+        updateActivity();
+    });
+</script>
 </body>
 </html>
