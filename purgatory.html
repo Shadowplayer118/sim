@@ -3,158 +3,504 @@
 <head>
     <title>City Simulation - Map View</title>
     <style>
+        :root {
+            --primary-color: #3a506b;
+            --secondary-color: #1c2541;
+            --accent-color: #5bc0be;
+            --text-light: #f8f9fa;
+            --text-dark: #212529;
+            --shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            --overlay-color: rgba(40, 44, 52, 0.75);
+        }
+        
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #edf2f7;
             margin: 0;
-            padding: 20px;
+            padding: 0;
+            color: var(--text-light);
+        }
+        
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        
+        header {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+            padding: 1rem 2rem;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .refresh-rate {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+        }
+        
+        .refresh-rate select {
+            background-color: var(--secondary-color);
+            color: var(--text-light);
+            padding: 0.25rem;
+            border: none;
+            border-radius: 4px;
+        }
+        
+        button {
+            background-color: var(--accent-color);
+            color: var(--text-dark);
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            background-color: #4ca8a7;
+            transform: translateY(-2px);
+        }
+        
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.7);
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-direction: column;
+            z-index: 1000;
+            color: white;
+            font-size: 1.2rem;
         }
-
-        h2 {
-            margin-bottom: 20px;
+        
+        .loading .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--accent-color);
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+            animation: spin 1s linear infinite;
         }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        main {
+            padding: 2rem;
+            flex-grow: 1;
+        }
+        
+        .map-container {
+            display: flex;
+            gap: 2rem;
+        }
+        
+        .district-list {
+            width: 1050px;
+            background-color: var(--secondary-color);
+            border-radius: 10px;
+            padding: 1rem;
+            color: var(--text-light);
+            box-shadow: var(--shadow);
+        }
+        
+        .district-item {
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .district-item:hover, .district-item.active {
+            background-color: var(--accent-color);
+            color: var(--text-dark);
+        }
+        
+        .district-item .icon {
+            width: 24px;
+            height: 24px;
+            background-size: cover;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        
         #city {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            padding-right: 1rem;
+        }
+        
+        .district {
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.3s;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-            max-width: 90vw;
-            height: 80vh;
-            overflow-y: auto;
-        }
-
-        .district {
-            background-color: #a85210;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.2);
-            transition: transform 0.2s;
+            height: 400px;
+            position: relative;
             background-size: cover;
             background-position: center;
-            background-repeat: no-repeat;
-            color: white;
-            position: relative;
-            overflow: hidden;
-            width: 100%;
-            height: 250px;
-            box-sizing: border-box;
-            flex-shrink: 0;
-            min-width: 900px;
-            max-width: 900px;
-            overflow-y: scroll;
         }
-
-        .district h3 {
-            margin: 5px 0;
-            font-size: 1.2em;
-            color: #fff;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 5px;
-            border-radius: 5px;
+        
+        .district:hover {
+            transform: translateY(-5px);
+        }
+        
+        .district-overlay {
             position: absolute;
-            top: 10px;
-            left: 10px;
-        }
-
-        .denizen {
-            display: inline-block;
-            margin: 5px;
-            position: relative;
-        }
-
-        .avatar {
-            background-color: #ffcc80;
-            width: 60px;
-            height: 150px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--overlay-color);
             display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            flex-direction: column;
+            height: 100%;
         }
-
+        
+        .district-header {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .district h3 {
+            margin: 0;
+            color: white;
+            font-size: 1.4rem;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+        }
+        
+        .denizens-container {
+            padding: 1rem;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            align-content: flex-start;
+        }
+        
+        .denizen {
+            width: calc(50% - 0.5rem);
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: all 0.2s;
+            backdrop-filter: blur(3px);
+        }
+        
+        .denizen:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            background-color: rgba(233, 236, 239, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+        }
+        
         .avatar img {
             width: 100%;
             height: 100%;
+            object-fit: cover;
         }
-
+        
+        .denizen-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            text-align: center;
+            color: white;
+        }
+        
         .action {
-            font-size: 14px;
-            margin-top: 3px;
-            color: #333;
+            font-size: 0.8rem;
+            text-align: center;
+            color: #e9ecef;
+            background-color: rgba(0, 0, 0, 0.3);
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        
+        .district-stats {
+            padding: 0.75rem 1rem;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #adb5bd;
+        }
+        
+        footer {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .map-container {
+                flex-direction: column;
+            }
+            
+            .district-list {
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+            
+            #city {
+                grid-template-columns: 1fr;
+            }
+            
+            .denizen {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <h2>City Simulation - Map View</h2>
-    <div id="city">Loading...</div>
+    <div class="app-container">
+        <header>
+            <h1>City Simulation</h1>
+            <div class="controls">
+                <div class="refresh-rate">
+                    <label for="refresh">Refresh rate:</label>
+                    <select id="refresh">
+                        <option value="2000">2s</option>
+                        <option value="5000" selected>5s</option>
+                        <option value="10000">10s</option>
+                        <option value="30000">30s</option>
+                    </select>
+                </div>
+                <button id="refresh-now">Refresh Now</button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="map-container">
+                <div class="district-list" id="district-nav">
+                    <h3>Districts</h3>
+                    <!-- Will be filled dynamically -->
+                </div>
+                
+                <div id="city">
+                    <!-- Will be filled dynamically -->
+                </div>
+            </div>
+        </main>
+        
+        <footer>
+            City Simulation &copy; 2025 - Real-time urban activity monitoring
+        </footer>
+    </div>
+    
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Loading city data...</div>
+    </div>
 
     <script>
+        let refreshInterval;
+        let allDistricts = {};
+        
+        function setRefreshRate() {
+            const rate = document.getElementById('refresh').value;
+            clearInterval(refreshInterval);
+            refreshInterval = setInterval(updateActivity, parseInt(rate));
+        }
+        
+        function updateDistrictNav() {
+            const nav = document.getElementById('district-nav');
+            let navContent = '<h3>Districts</h3>';
+            
+            const districtNames = Object.keys(allDistricts).sort();
+            districtNames.forEach(name => {
+                const denizensCount = allDistricts[name].length;
+                navContent += `
+                <div class="district-item" data-district="${name}">
+                    <div class="icon" style="background-image: url('districts/${name}.jpg')"></div>
+                    <span>${name} (${denizensCount})</span>
+                </div>`;
+            });
+            
+            nav.innerHTML = navContent;
+            
+            // Add event listeners
+            document.querySelectorAll('.district-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const districtName = item.getAttribute('data-district');
+                    document.querySelectorAll('.district-item').forEach(di => di.classList.remove('active'));
+                    item.classList.add('active');
+                    
+                    // Scroll to district
+                    document.getElementById(districtName).scrollIntoView({ behavior: 'smooth' });
+                });
+            });
+        }
+        
         function updateActivity() {
+            document.getElementById('loading').style.display = 'flex';
+            
             fetch('sim.php')
                 .then(response => response.json())
                 .then(data => {
                     const cityDiv = document.getElementById('city');
                     cityDiv.innerHTML = '';
-
+                    allDistricts = {};
+                    
                     if (data.error) {
-                        cityDiv.innerText = 'Error: ' + data.error;
+                        cityDiv.innerHTML = `<div class="error-message">Error: ${data.error}</div>`;
                     } else {
-                        const districts = {};
-
                         data.forEach(item => {
-                            if (!districts[item.district_name]) {
-                                districts[item.district_name] = [];
+                            if (!allDistricts[item.district_name]) {
+                                allDistricts[item.district_name] = [];
                             }
-                            districts[item.district_name].push({
-                                denizen: item.denizen_name,
+                            allDistricts[item.district_name].push({
+                                name: item.denizen_name,
                                 action: item.action_name,
                                 location: item.location_name
                             });
                         });
-
-                        for (const [districtName, denizens] of Object.entries(districts)) {
+                        
+                        // Sort districts alphabetically
+                        const sortedDistricts = Object.entries(allDistricts).sort((a, b) => a[0].localeCompare(b[0]));
+                        
+                        sortedDistricts.forEach(([districtName, denizens]) => {
                             const districtDiv = document.createElement('div');
                             districtDiv.classList.add('district');
+                            districtDiv.id = districtName;
                             districtDiv.style.backgroundImage = `url('districts/${districtName}.jpg')`;
-
+                            
+                            const overlayDiv = document.createElement('div');
+                            overlayDiv.classList.add('district-overlay');
+                            
+                            const headerDiv = document.createElement('div');
+                            headerDiv.classList.add('district-header');
+                            
                             const title = document.createElement('h3');
                             title.textContent = districtName;
-                            districtDiv.appendChild(title);
-
+                            
+                            headerDiv.appendChild(title);
+                            
+                            const denizensContainer = document.createElement('div');
+                            denizensContainer.classList.add('denizens-container');
+                            
                             denizens.forEach(denizen => {
                                 const denizenDiv = document.createElement('div');
                                 denizenDiv.classList.add('denizen');
-
+                                
                                 const avatarDiv = document.createElement('div');
                                 avatarDiv.classList.add('avatar');
-
+                                
                                 const img = document.createElement('img');
-                                img.src = `images/${denizen.denizen}.jpg`;
-                                img.alt = denizen.denizen;
-
+                                img.src = `images/${denizen.name}.jpg`;
+                                img.alt = denizen.name;
+                                img.onerror = function() {
+                                    this.src = 'images/default-avatar.jpg';
+                                };
+                                
+                                const nameDiv = document.createElement('div');
+                                nameDiv.classList.add('denizen-name');
+                                nameDiv.textContent = denizen.name;
+                                
                                 const actionDiv = document.createElement('div');
                                 actionDiv.classList.add('action');
                                 actionDiv.textContent = `${denizen.action} at ${denizen.location}`;
-
+                                
                                 avatarDiv.appendChild(img);
                                 denizenDiv.appendChild(avatarDiv);
+                                denizenDiv.appendChild(nameDiv);
                                 denizenDiv.appendChild(actionDiv);
-                                districtDiv.appendChild(denizenDiv);
+                                denizensContainer.appendChild(denizenDiv);
                             });
-
+                            
+                            const statsDiv = document.createElement('div');
+                            statsDiv.classList.add('district-stats');
+                            statsDiv.innerHTML = `
+                                <div>${denizens.length} citizens</div>
+                                <div>Updated: ${new Date().toLocaleTimeString()}</div>
+                            `;
+                            
+                            overlayDiv.appendChild(headerDiv);
+                            overlayDiv.appendChild(denizensContainer);
+                            overlayDiv.appendChild(statsDiv);
+                            districtDiv.appendChild(overlayDiv);
                             cityDiv.appendChild(districtDiv);
-                        }
+                        });
+                        
+                        updateDistrictNav();
                     }
                 })
-                .catch(error => console.error('Error fetching activity:', error));
+                .catch(error => {
+                    console.error('Error fetching activity:', error);
+                    document.getElementById('city').innerHTML = `
+                        <div class="error-message">
+                            Failed to fetch data. Please try again later.
+                        </div>`;
+                })
+                .finally(() => {
+                    document.getElementById('loading').style.display = 'none';
+                });
         }
-
-        setInterval(updateActivity, 5000);
-        updateActivity();
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('refresh').addEventListener('change', setRefreshRate);
+            document.getElementById('refresh-now').addEventListener('click', updateActivity);
+            
+            setRefreshRate();
+            updateActivity();
+        });
     </script>
 </body>
 </html>
