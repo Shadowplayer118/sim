@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>City Simulation - Map View</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+        #city {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 90vw;
+            height: 80vh;
+            overflow-y: auto;
+        }
+
+        .district {
+            background-color: #a85210;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 2px 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            color: white;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 250px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            min-width: 900px;
+            max-width: 900px;
+            overflow-y: scroll;
+        }
+
+        .district h3 {
+            margin: 5px 0;
+            font-size: 1.2em;
+            color: #fff;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            border-radius: 5px;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+
+        .denizen {
+            display: inline-block;
+            margin: 5px;
+            position: relative;
+        }
+
+        .avatar {
+            background-color: #ffcc80;
+            width: 60px;
+            height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .avatar img {
+            width: 100%;
+            height: 100%;
+        }
+
+        .action {
+            font-size: 14px;
+            margin-top: 3px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h2>City Simulation - Map View</h2>
+    <div id="city">Loading...</div>
+
+    <script>
+        function updateActivity() {
+            fetch('sim.php')
+                .then(response => response.json())
+                .then(data => {
+                    const cityDiv = document.getElementById('city');
+                    cityDiv.innerHTML = '';
+
+                    if (data.error) {
+                        cityDiv.innerText = 'Error: ' + data.error;
+                    } else {
+                        const districts = {};
+
+                        data.forEach(item => {
+                            if (!districts[item.district_name]) {
+                                districts[item.district_name] = [];
+                            }
+                            districts[item.district_name].push({
+                                denizen: item.denizen_name,
+                                action: item.action_name,
+                                location: item.location_name
+                            });
+                        });
+
+                        for (const [districtName, denizens] of Object.entries(districts)) {
+                            const districtDiv = document.createElement('div');
+                            districtDiv.classList.add('district');
+                            districtDiv.style.backgroundImage = `url('districts/${districtName}.jpg')`;
+
+                            const title = document.createElement('h3');
+                            title.textContent = districtName;
+                            districtDiv.appendChild(title);
+
+                            denizens.forEach(denizen => {
+                                const denizenDiv = document.createElement('div');
+                                denizenDiv.classList.add('denizen');
+
+                                const avatarDiv = document.createElement('div');
+                                avatarDiv.classList.add('avatar');
+
+                                const img = document.createElement('img');
+                                img.src = `images/${denizen.denizen}.jpg`;
+                                img.alt = denizen.denizen;
+
+                                const actionDiv = document.createElement('div');
+                                actionDiv.classList.add('action');
+                                actionDiv.textContent = `${denizen.action} at ${denizen.location}`;
+
+                                avatarDiv.appendChild(img);
+                                denizenDiv.appendChild(avatarDiv);
+                                denizenDiv.appendChild(actionDiv);
+                                districtDiv.appendChild(denizenDiv);
+                            });
+
+                            cityDiv.appendChild(districtDiv);
+                        }
+                    }
+                })
+                .catch(error => console.error('Error fetching activity:', error));
+        }
+
+        setInterval(updateActivity, 5000);
+        updateActivity();
+    </script>
+</body>
+</html>
