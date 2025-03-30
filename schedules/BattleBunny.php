@@ -4,80 +4,84 @@
 function getDenizenActivity($pdo, $denizen) {
     $denizenId = $denizen['denizen_id'];
 
-    $hour = date('H');
-    $dayOfWeek = date('N'); // 1 (Monday) to 7 (Sunday)
+    date_default_timezone_set('Asia/Manila'); // Set to Philippine time
 
-    // Check if it's a weekday (1-5)
-    $isWeekday = $dayOfWeek >= 1 && $dayOfWeek <= 5;
+    $hour = intval(date('H')); // Get the current hour as an integer
+    
+   // Display the current hour for debugging
+    
+    if ($hour >= 6 && $hour < 12) {
 
-    if ($isWeekday) {
-        if ($hour >= 6 && $hour < 12 || ($hour >= 13 && $hour < 18)) {
-            // Work/Occupation
-            $occupationQuery = $pdo->prepare("SELECT location_id, type FROM occupation WHERE denizen_id = :denizen_id");
-            $occupationQuery->execute(['denizen_id' => $denizenId]);
-            $occupation = $occupationQuery->fetch(PDO::FETCH_ASSOC);
+        $actionId = [22,21,20,19,18,17,16,15,14][array_rand([22,21,20,19,18,17,16,15,14])];
+        $location = 53;
+        $district = 1;
+    
+    
+       
+        return ['action_id' => $actionId, 'district_id' => $district, 'location_id' => $location];
+    } 
+    
+    
+    
+    
+    elseif ($hour >= 12 && $hour < 13) {
 
-            if ($occupation) {
-                $locationId = $occupation['location_id'];
-                $type = $occupation['type'];
-
-                $districtQuery = $pdo->prepare("SELECT district_id, name FROM location WHERE location_id = :location_id");
-                $districtQuery->execute(['location_id' => $locationId]);
-                $location = $districtQuery->fetch(PDO::FETCH_ASSOC);
-
-                $actionQuery = $pdo->prepare("SELECT action_id FROM actions WHERE (location_id = :location_id AND type = :type) ORDER BY RAND() LIMIT 1");
-                $actionQuery->execute(['location_id' => $locationId, 'type' => $type]);
-                $actionId = $actionQuery->fetchColumn();
-
-                return ['action_id' => $actionId ?: '1', 'district_id' => $location['district_id'], 'location_id' => $locationId];
-            }
-        } elseif ($hour >= 12 && $hour < 13) {
-            // Lunch
-            $foodQuery = $pdo->query("SELECT location_id, district_id FROM location WHERE type = 'Food' ORDER BY RAND() LIMIT 1");
-            $food = $foodQuery->fetch(PDO::FETCH_ASSOC);
-
-            $actionQuery = $pdo->prepare("SELECT action_id FROM actions WHERE location_id = :location_id ORDER BY RAND() LIMIT 1");
-            $actionQuery->execute(['location_id' => $food['location_id']]);
-            $actionId = $actionQuery->fetchColumn();
-
-            return ['action_id' => $actionId ?: '1', 'district_id' => $food['district_id'], 'location_id' => $food['location_id']];
-        } elseif ($hour >= 18 && $hour < 22) {
-            // Social Time
-            $socialQuery = $pdo->query("SELECT location_id, district_id FROM location WHERE type = 'Social' ORDER BY RAND() LIMIT 1");
-            $social = $socialQuery->fetch(PDO::FETCH_ASSOC);
-
-            $actionQuery = $pdo->prepare("SELECT action_id FROM actions WHERE location_id = :location_id ORDER BY RAND() LIMIT 1");
-            $actionQuery->execute(['location_id' => $social['location_id']]);
-            $actionId = $actionQuery->fetchColumn();
-
-            return ['action_id' => $actionId ?: '1', 'district_id' => $social['district_id'], 'location_id' => $social['location_id']];
-        } elseif ($hour >= 23 && $hour < 5) {
-            // Home
-            // $homeQuery = $pdo->prepare("SELECT location_id FROM homes WHERE denizen_id = :denizen_id");
-            // $homeQuery->execute(['denizen_id' => $denizenId]);
-            // $homeLocation = $homeQuery->fetchColumn();
-
-            // $districtQuery = $pdo->prepare("SELECT district_id FROM location WHERE location_id = :location_id");
-            // $districtQuery->execute(['location_id' => $homeLocation]);
-            // $districtId = $districtQuery->fetchColumn();
-
-            // $actionQuery = $pdo->prepare("SELECT action_id FROM actions WHERE type = 'Home' ORDER BY RAND() LIMIT 1");
-            // $actionQuery->execute();
-            // $actionId = $actionQuery->fetchColumn();
-
-            return ['action_id' => $actionId ?: '28', 'district_id' => '5', 'location_id' => '51'];
+    
+        $location = [13,14,52][array_rand([13,14,52])];
+        $actionId = 0;
+    
+        if($location == 13){
+             $actionId = [36,37,38][array_rand([36,37,38])];
         }
-    } else {
-        // Weekend Schedule
-        $socialQuery = $pdo->query("SELECT location_id, district_id FROM location WHERE type = 'Social' ORDER BY RAND() LIMIT 1");
-        $social = $socialQuery->fetch(PDO::FETCH_ASSOC);
-
-        $actionQuery = $pdo->prepare("SELECT action_id FROM actions WHERE location_id = :location_id ORDER BY RAND() LIMIT 1");
-        $actionQuery->execute(['location_id' => $social['location_id']]);
-        $actionId = $actionQuery->fetchColumn();
-
-        return ['action_id' => $actionId ?: '1', 'district_id' => $social['district_id'], 'location_id' => $social['location_id']];
+    
+        elseif ($location == 14){
+            $actionId = [33,34,35][array_rand([33,34,35])];
+        }
+    
+        elseif ($location == 52){
+            $actionId = [29,30,31,32][array_rand([29,30,31,32])];
+        }
+    
+        $district = 1;
+    
+       
+        return ['action_id' => $actionId, 'district_id' => $district, 'location_id' => $location];
+    } 
+    
+    
+    
+    elseif ($hour >= 13 && $hour < 17) {
+        
+        $actionId = [22,21,20,19,18,17,16,15,14][array_rand([22,21,20,19,18,17,16,15,14])];
+        $location = 53;
+        $district = 1;
+    
+    
+       
+        return ['action_id' => $actionId, 'district_id' => $district, 'location_id' => $location];
+      
+    } 
+    
+    
+    elseif ($hour >= 17 && $hour < 22) {
+    
+      
+       
+        
+        $location = [6,8,9,16,17,18,19,27,29,30,31,32,48,49,50][array_rand([6,8,9,16,17,18,19,27,29,30,31,32,48,49,50])];
+        $actionId = [ 23,24,25,26,27][array_rand([ 23,24,25,26,27])];
+        $district = 1;
+      
+        return ['action_id' => $actionId, 'district_id' => $district, 'location_id' => $location];
+    } 
+    
+    else {
+      
+        $location =51;
+        $actionId =28;
+        $district =1;
+      
+        return ['action_id' => $actionId, 'district_id' => $district, 'location_id' => $location];
     }
-    return null;
 }
 ?>
