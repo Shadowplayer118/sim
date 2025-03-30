@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive City Map</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #map-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .district {
+            fill-opacity: 0.7;
+            stroke: #333;
+            stroke-width: 2;
+            transition: fill-opacity 0.3s;
+            cursor: pointer;
+        }
+        .district:hover {
+            fill-opacity: 0.9;
+        }
+        .district-label {
+            font-size: 14px;
+            font-weight: bold;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+        .location {
+            fill: #333;
+            stroke: #fff;
+            stroke-width: 1;
+            cursor: pointer;
+            transition: fill 0.3s;
+        }
+        .location:hover {
+            fill: #f00;
+        }
+        .location-label {
+            font-size: 10px;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+        #info-panel {
+            position: absolute;
+            right: 20px;
+            top: 20px;
+            width: 300px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: 1px solid #333;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        #back-button {
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            display: none;
+            padding: 8px 15px;
+            background-color: #333;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #location-image {
+            width: 100%;
+            height: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map-container">
+        <svg id="map" width="100%" height="100%">
+            <!-- SVG content will be added dynamically -->
+        </svg>
+        <button id="back-button">Back to Full Map</button>
+        <div id="info-panel">
+            <h2 id="info-title">District Info</h2>
+            <p id="info-description">Click on a district to see details.</p>
+            <img id="location-image" src="" alt="Location Image" style="display: none;">
+        </div>
+    </div>
+
+    <script>
+        // City map data
+        const cityData = {
+            name: "Purgatory City",
+            districts: [
+                {
+                    id: "yellow-district",
+                    name: "Yellow District",
+                    color: "#e6e600",
+                    description: "The commercial hub of Purgatory City with vibrant markets and businesses.",
+                    path: "M150,100 L250,100 L300,200 L200,300 L100,250 Z",
+                    center: { x: 200, y: 180 },
+                    locations: [
+                        {
+                            id: "yellow-harbor",
+                            name: "Yellow Harbor",
+                            description: "The main port where goods enter the Yellow District.",
+                            position: { x: 210, y: 120 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "central-market",
+                            name: "Central Market",
+                            description: "A bustling marketplace with vendors from across the city.",
+                            position: { x: 220, y: 180 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "derelict-district",
+                    name: "Derelict District",
+                    color: "#99ccff",
+                    description: "An abandoned industrial zone with crumbling infrastructure.",
+                    path: "M50,50 L150,50 L150,200 L50,200 Z",
+                    center: { x: 100, y: 125 },
+                    locations: [
+                        {
+                            id: "abandoned-factory",
+                            name: "Abandoned Factory",
+                            description: "Once the economic center, now left to decay.",
+                            position: { x: 100, y: 100 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "rusty-pier",
+                            name: "Rusty Pier",
+                            description: "A deteriorating pier that extends into the harbor.",
+                            position: { x: 80, y: 150 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "santo-pablo",
+                    name: "Santo Pablo",
+                    color: "#99ffcc",
+                    description: "An upscale residential area with elegant architecture.",
+                    path: "M300,50 L450,50 L450,200 L300,200 Z",
+                    center: { x: 375, y: 125 },
+                    locations: [
+                        {
+                            id: "grand-plaza",
+                            name: "Grand Plaza",
+                            description: "A beautiful public square surrounded by historic buildings.",
+                            position: { x: 375, y: 125 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "high-street",
+                            name: "High Street",
+                            description: "Luxury shopping district with exclusive boutiques.",
+                            position: { x: 400, y: 150 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "razor-avenue",
+                    name: "Razor Avenue",
+                    color: "#9999ff",
+                    description: "Known for its nightlife and entertainment venues.",
+                    path: "M300,200 L450,200 L450,350 L300,350 Z",
+                    center: { x: 375, y: 275 },
+                    locations: [
+                        {
+                            id: "neon-plaza",
+                            name: "Neon Plaza",
+                            description: "Center of nightlife with clubs and theaters.",
+                            position: { x: 375, y: 250 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "crescendo-hall",
+                            name: "Crescendo Hall",
+                            description: "Famous concert venue hosting major performances.",
+                            position: { x: 400, y: 300 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "rose-thorn",
+                    name: "Rose and Thorn District",
+                    color: "#ff9999",
+                    description: "A district of contrasts with beautiful gardens alongside rough neighborhoods.",
+                    path: "M50,200 L150,200 L200,350 L50,350 Z",
+                    center: { x: 120, y: 275 },
+                    locations: [
+                        {
+                            id: "thorn-gardens",
+                            name: "Thorn Gardens",
+                            description: "Beautiful but dangerous botanical garden.",
+                            position: { x: 120, y: 250 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "rose-boulevard",
+                            name: "Rose Boulevard",
+                            description: "A street lined with rose bushes and historic houses.",
+                            position: { x: 100, y: 300 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "city-central",
+                    name: "City Central",
+                    color: "#99ff99",
+                    description: "The administrative heart of Purgatory City.",
+                    path: "M150,200 L250,200 L250,350 L150,350 Z",
+                    center: { x: 200, y: 275 },
+                    locations: [
+                        {
+                            id: "city-hall",
+                            name: "City Hall",
+                            description: "The seat of local government and bureaucracy.",
+                            position: { x: 200, y: 275 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "central-park",
+                            name: "Central Park",
+                            description: "A peaceful green space amidst the urban landscape.",
+                            position: { x: 180, y: 310 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "salem-drive",
+                    name: "Salem Drive",
+                    color: "#ff99ff",
+                    description: "A mysterious district with occult history and atmosphere.",
+                    path: "M250,200 L300,200 L300,350 L250,350 Z",
+                    center: { x: 275, y: 275 },
+                    locations: [
+                        {
+                            id: "witch-museum",
+                            name: "Witch Museum",
+                            description: "A museum dedicated to the occult history of the district.",
+                            position: { x: 275, y: 250 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "salem-square",
+                            name: "Salem Square",
+                            description: "Historic town square where occult gatherings once took place.",
+                            position: { x: 275, y: 300 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "pauruso",
+                    name: "Pauruso",
+                    color: "#99ccff",
+                    description: "A waterfront district with a strong maritime culture.",
+                    path: "M50,350 L200,350 L200,450 L50,450 Z",
+                    center: { x: 125, y: 400 },
+                    locations: [
+                        {
+                            id: "fisherman-wharf",
+                            name: "Fisherman's Wharf",
+                            description: "Traditional fishing port with seafood markets.",
+                            position: { x: 125, y: 375 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "maritime-museum",
+                            name: "Maritime Museum",
+                            description: "Museum showcasing the naval history of Purgatory City.",
+                            position: { x: 150, y: 425 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "effrey",
+                    name: "Effrey",
+                    color: "#ff9999",
+                    description: "A bohemian district popular with artists and creators.",
+                    path: "M200,350 L300,350 L300,450 L200,450 Z",
+                    center: { x: 250, y: 400 },
+                    locations: [
+                        {
+                            id: "artists-alley",
+                            name: "Artists' Alley",
+                            description: "Street lined with galleries and studios.",
+                            position: { x: 250, y: 375 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "bohemian-cafe",
+                            name: "Bohemian Café",
+                            description: "Popular gathering place for creative minds.",
+                            position: { x: 275, y: 425 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                },
+                {
+                    id: "pinewood",
+                    name: "Pinewood District",
+                    color: "#e6e600",
+                    description: "A suburban area with tree-lined streets and family homes.",
+                    path: "M300,350 L450,350 L450,450 L300,450 Z",
+                    center: { x: 375, y: 400 },
+                    locations: [
+                        {
+                            id: "pinewood-park",
+                            name: "Pinewood Park",
+                            description: "Popular recreational area for local families.",
+                            position: { x: 375, y: 400 },
+                            imagePath: "/api/placeholder/400/300"
+                        },
+                        {
+                            id: "suburban-plaza",
+                            name: "Suburban Plaza",
+                            description: "Shopping center serving the local community.",
+                            position: { x: 400, y: 425 },
+                            imagePath: "/api/placeholder/400/300"
+                        }
+                    ]
+                }
+            ],
+            landmarks: [
+                {
+                    id: "reapers-sandbox",
+                    name: "Reaper's Sandbox",
+                    description: "A mysterious desert area outside the city proper.",
+                    position: { x: 100, y: 50 }
+                },
+                {
+                    id: "short-beach",
+                    name: "Short Beach",
+                    description: "A small beach area at the northwest edge of the city.",
+                    position: { x: 50, y: 20 }
+                },
+                {
+                    id: "angler-woods",
+                    name: "Angler Woods",
+                    description: "Dense forest east of the city with many fishing spots.",
+                    position: { x: 500, y: 250 }
+                }
+            ]
+        };
+
+        // SVG namespace
+        const svgNS = "http://www.w3.org/2000/svg";
+
+        // Get elements
+        const mapSvg = document.getElementById('map');
+        const infoPanel = document.getElementById('info-panel');
+        const infoTitle = document.getElementById('info-title');
+        const infoDescription = document.getElementById('info-description');
+        const locationImage = document.getElementById('location-image');
+        const backButton = document.getElementById('back-button');
+
+        // State variables
+        let currentView = 'city'; // 'city', 'district', 'location'
+        let currentDistrict = null;
+        let currentLocation = null;
+        let zoomLevel = 1;
+        let viewBox = { x: 0, y: 0, width: 500, height: 500 };
+
+        // Initialize the map
+        function initMap() {
+            updateViewBox();
+            drawDistricts();
+        }
+
+        // Update SVG viewBox
+        function updateViewBox() {
+            mapSvg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+        }
+
+        // Draw all districts
+        function drawDistricts() {
+            // Clear existing content
+            mapSvg.innerHTML = '';
+
+            // Draw each district
+            cityData.districts.forEach(district => {
+                const path = document.createElementNS(svgNS, 'path');
+                path.setAttribute('id', district.id);
+                path.setAttribute('d', district.path);
+                path.setAttribute('class', 'district');
+                path.setAttribute('fill', district.color);
+                path.addEventListener('click', () => showDistrict(district));
+
+                const label = document.createElementNS(svgNS, 'text');
+                label.setAttribute('x', district.center.x);
+                label.setAttribute('y', district.center.y);
+                label.setAttribute('class', 'district-label');
+                label.textContent = district.name;
+
+                mapSvg.appendChild(path);
+                mapSvg.appendChild(label);
+            });
+
+            // Draw landmarks
+            cityData.landmarks.forEach(landmark => {
+                const circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', landmark.position.x);
+                circle.setAttribute('cy', landmark.position.y);
+                circle.setAttribute('r', 5);
+                circle.setAttribute('fill', '#000');
+
+                const label = document.createElementNS(svgNS, 'text');
+                label.setAttribute('x', landmark.position.x);
+                label.setAttribute('y', landmark.position.y - 10);
+                label.setAttribute('class', 'district-label');
+                label.textContent = landmark.name;
+
+                mapSvg.appendChild(circle);
+                mapSvg.appendChild(label);
+            });
+        }
+
+        // Show district details and locations
+        function showDistrict(district) {
+            currentDistrict = district;
+            currentView = 'district';
+
+            // Update viewBox to zoom into district
+            const districtElement = document.getElementById(district.id);
+            const bbox = districtElement.getBBox();
+            const padding = 20;
+            viewBox = {
+                x: bbox.x - padding,
+                y: bbox.y - padding,
+                width: bbox.width + (padding * 2),
+                height: bbox.height + (padding * 2)
+            };
+            updateViewBox();
+
+            // Clear map and draw the district
+            mapSvg.innerHTML = '';
+            
+            // Draw the district
+            const path = document.createElementNS(svgNS, 'path');
+            path.setAttribute('d', district.path);
+            path.setAttribute('fill', district.color);
+            path.setAttribute('class', 'district');
+            mapSvg.appendChild(path);
+
+            // Draw district label
+            const label = document.createElementNS(svgNS, 'text');
+            label.setAttribute('x', district.center.x);
+            label.setAttribute('y', district.center.y);
+            label.setAttribute('class', 'district-label');
+            label.textContent = district.name;
+            mapSvg.appendChild(label);
+
+            // Draw locations
+            district.locations.forEach(location => {
+                const locationCircle = document.createElementNS(svgNS, 'circle');
+                locationCircle.setAttribute('cx', location.position.x);
+                locationCircle.setAttribute('cy', location.position.y);
+                locationCircle.setAttribute('r', 8);
+                locationCircle.setAttribute('class', 'location');
+                locationCircle.addEventListener('click', () => showLocation(location));
+
+                const locationLabel = document.createElementNS(svgNS, 'text');
+                locationLabel.setAttribute('x', location.position.x);
+                locationLabel.setAttribute('y', location.position.y - 12);
+                locationLabel.setAttribute('class', 'location-label');
+                locationLabel.textContent = location.name;
+
+                mapSvg.appendChild(locationCircle);
+                mapSvg.appendChild(locationLabel);
+            });
+
+            // Update info panel
+            infoTitle.textContent = district.name;
+            infoDescription.textContent = district.description;
+            locationImage.style.display = 'none';
+            infoPanel.style.display = 'block';
+            
+            // Show back button
+            backButton.style.display = 'block';
+        }
+
+        // Show location details
+        function showLocation(location) {
+            currentLocation = location;
+            currentView = 'location';
+
+            // Update info panel
+            infoTitle.textContent = location.name;
+            infoDescription.textContent = location.description;
+            locationImage.src = location.imagePath;
+            locationImage.alt = location.name;
+            locationImage.style.display = 'block';
+        }
+
+        // Back to full city view
+        function backToCity() {
+            currentDistrict = null;
+            currentLocation = null;
+            currentView = 'city';
+            
+            // Reset viewBox
+            viewBox = { x: 0, y: 0, width: 500, height: 500 };
+            updateViewBox();
+            
+            // Redraw districts
+            drawDistricts();
+            
+            // Hide info panel and back button
+            infoPanel.style.display = 'none';
+            backButton.style.display = 'none';
+        }
+
+        // Back button functionality
+        backButton.addEventListener('click', () => {
+            if (currentView === 'location') {
+                // Go back to district view
+                showDistrict(currentDistrict);
+            } else {
+                // Go back to city view
+                backToCity();
+            }
+        });
+
+        // Initialize the map when page loads
+        window.addEventListener('load', initMap);
+    </script>
+</body>
+</html>

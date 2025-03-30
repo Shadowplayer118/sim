@@ -1,78 +1,111 @@
-
-
 <?php
-date_default_timezone_set('Asia/Manila'); // Set to Philippine time
+// get_activity.php
+$host = 'localhost';
+$dbname = 'purgatory_city';
+$username = 'root';
+$password = '';
 
-$hour = intval(date('H')); // Get the current hour as an integer
+try {
+    // Establish a connection
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-echo "Current Hour: $hour<br>"; // Display the current hour for debugging
+    // Get all denizens with their IDs
+    $denizenQuery = $pdo->query("SELECT denizen_id, name FROM denizen");
+    $denizens = $denizenQuery->fetchAll(PDO::FETCH_ASSOC);
 
-if ($hour >= 6 && $hour < 12) {
-    echo "Work";
-    $actionId = [22,21,20,19,18,17,16,15,14][array_rand([22,21,20,19,18,17,16,15,14])];
-    $location = 53;
-    $district = 1;
+    $activities = []; // Store the final result
 
+    foreach ($denizens as $denizen) {
+        $denizenId = $denizen['denizen_id'];
+        $denizenName = $denizen['name'];
 
-    echo " Action ID: $actionId, District: $district, Location: $location";
-} 
+        // Convert denizen name into a safe filename
+        $scheduleFile = "schedules/" . strtolower(str_replace(' ', '_', $denizenName)) . ".php";
 
+        if (file_exists($scheduleFile)) {
+            include $scheduleFile;
+            if (function_exists('getDenizenActivity')) {
+                // Attempt to retrieve the activity
+                $activity = getDenizenActivity($pdo, $denizen);
+                if ($activity && isset($activity['action_id'], $activity['district_id'], $activity['location_id'])) {
+                    $actionId = $activity['action_id'];
+                    $districtId = $activity['district_id'];
+                    $locationId = $activity['location_id'];
+                } else {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        } else {
+            // Default random selection
+            $actionQuery = $pdo->query("SELECT action_id FROM actions ORDER BY RAND() LIMIT 1");
+            $actionId = $actionQuery->fetchColumn();
 
+            $districtQuery = $pdo->query("SELECT district_id FROM district ORDER BY RAND() LIMIT 1");
+            $districtId = $districtQuery->fetchColumn();
 
+            $locationQuery = $pdo->prepare("SELECT location_id FROM location WHERE district_id = :district_id ORDER BY RAND() LIMIT 1");
+            $locationQuery->execute(['district_id' => $districtId]);
+            $locationId = $locationQuery->fetchColumn();
+        }
 
-elseif ($hour >= 12 && $hour < 13) {
-    echo "Lunch";
+        if ($locationId) {
+            // Check for existing activity
+            $checkQuery = $pdo->prepare("SELECT * FROM activities WHERE denizen_id = :denizen_id");
+            $checkQuery->execute(['denizen_id' => $denizenId]);
+            $existingActivity = $checkQuery->fetch(PDO::FETCH_ASSOC);
 
-    $location = [13,14,52][array_rand([13,14,52])];
-    $actionId = 0;
-
-    if($location == 13){
-         $actionId = [36,37,38][array_rand([36,37,38])];
+            if ($existingActivity) {
+                // Update existing activity
+                $updateQuery = $pdo->prepare("
+                    UPDATE activities 
+                    SET action_id = :action_id, district_id = :district_id, location_id = :location_id 
+                    WHERE denizen_id = :denizen_id
+                ");
+                $updateQuery->execute([
+                    'action_id' => $actionId,
+                    'district_id' => $districtId,
+                    'location_id' => $locationId,
+                    'denizen_id' => $denizenId
+                ]);
+            } else {
+                // Insert new activity
+                $insertQuery = $pdo->prepare("
+                    INSERT INTO activities (denizen_id, action_id, district_id, location_id) 
+                    VALUES (:denizen_id, :action_id, :district_id, :location_id)
+                ");
+                $insertQuery->execute([
+                    'denizen_id' => $denizenId,
+                    'action_id' => $actionId,
+                    'district_id' => $districtId,
+                    'location_id' => $locationId
+                ]);
+            }
+        }
     }
 
-    elseif ($location == 14){
-        $actionId = [33,34,35][array_rand([33,34,35])];
+    // Fetch the updated activity data
+    $activityQuery = $pdo->query("
+        SELECT d.name AS denizen_name, a.name AS action_name, ds.name AS district_name, l.name AS location_name 
+        FROM activities 
+        JOIN denizen d ON activities.denizen_id = d.denizen_id
+        JOIN actions a ON activities.action_id = a.action_id
+        JOIN district ds ON activities.district_id = ds.district_id
+        JOIN location l ON activities.location_id = l.location_id
+    ");
+    $activities = $activityQuery->fetchAll(PDO::FETCH_ASSOC);
+
+    // Output the updated activity data as JSON
+    header('Content-Type: application/json');
+    if (!empty($activities)) {
+        echo json_encode($activities, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+    } else {
+        echo json_encode(['message' => 'No activities found']);
     }
-
-    elseif ($location == 52){
-        $actionId = [29,30,31,32][array_rand([29,30,31,32])];
-    }
-
-    $district = 1;
-
-    echo " Action ID: $actionId, District: $district, Location: $location";
-} 
-
-
-
-elseif ($hour >= 13 && $hour < 17) {
-    echo "Work";
-    $actionId = [22,21,20,19,18,17,16,15,14][array_rand([22,21,20,19,18,17,16,15,14])];
-    $location = 53;
-    $district = 1;
-
-
-    echo " Action ID: $actionId, District: $district, Location: $location";
-  
-} 
-
-
-elseif ($hour >= 17 && $hour < 22) {
-
-    echo "Free Time";
-   
-    
-    $location = [6,8,9,16,17,18,19,27,29,30,31,32,48,49,50][array_rand([6,8,9,16,17,18,19,27,29,30,31,32,48,49,50])];
-    $actionId = [ 23,24,25,26,27][array_rand([ 23,24,25,26,27])];
-    $district = 1;
-    echo " Action ID: $actionId, District: $district, Location: $location";
-} 
-
-else {
-    echo "Sleep";
-    $location =51;
-    $actionId =28;
-    $district =1;
-    echo " Action ID: $actionId, District: $district, Location: $location";
+} catch (PDOException $e) {
+    header('Content-Type: application/json');
+    echo json_encode(['error' => $e->getMessage()]);
 }
 ?>
