@@ -424,7 +424,7 @@
         function updateActivity() {
             document.getElementById('loading').style.display = 'flex';
             
-            fetch('sim.php')
+            fetch('schedulingSim.php')
                 .then(response => response.json())
                 .then(data => {
                     const cityDiv = document.getElementById('city');
