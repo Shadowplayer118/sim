@@ -2,6 +2,89 @@
 <html>
 <head>
     <title>Stray Purgatory - Map View</title>
+
+    <style>
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--overlay-color);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            background-color: var(--secondary-color);
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            width: 80%;
+            max-width: 500px;
+            animation: modalFadeIn 0.3s;
+            color: var(--text-light);
+        }
+        
+        @keyframes modalFadeIn {
+            from {opacity: 0; transform: translateY(-20px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+        
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .close-button:hover {
+            color: var(--accent-color);
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .modal-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            overflow: hidden;
+            margin-right: 20px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            border: 3px solid var(--accent-color);
+        }
+        
+        .modal-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .modal-details {
+            line-height: 1.6;
+        }
+        
+        .modal-details p {
+            margin: 10px 0;
+        }
+        
+        /* Make denizen cards clickable */
+        .denizen {
+            cursor: pointer;
+        }
+    </style>
+
     <style>
         :root {
             --primary-color: #3a506b;
@@ -361,6 +444,26 @@
         
         <main>
             <div class="map-container">
+
+                <!-- Add this HTML for the modal right before the closing body tag -->
+<div id="denizen-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-button">&times;</span>
+        <div class="modal-header">
+            <div class="modal-avatar">
+                <img id="modal-avatar-img" src="" alt="Denizen">
+            </div>
+            <h2 id="modal-name"></h2>
+        </div>
+        <div class="modal-details">
+            <p><strong>Action:</strong> <span id="modal-action"></span></p>
+            <p><strong>Location:</strong> <span id="modal-location"></span></p>
+            <p><strong>District:</strong> <span id="modal-district"></span></p>
+            <p><strong>Last Updated:</strong> <span id="modal-timestamp"></span></p>
+        </div>
+    </div>
+</div>
+
                 <div class="district-list" id="district-nav">
                     <h3>Districts</h3>
                     <!-- Will be filled dynamically -->
@@ -576,6 +679,157 @@
         setRefreshRate();
         updateActivity();
     });
+</script>
+
+<script>
+    // Get the modal element
+    const modal = document.getElementById('denizen-modal');
+    const closeButton = document.querySelector('.close-button');
+    
+    // Function to open the modal with denizen details
+    function openDenizenModal(denizenName, action, location, district) {
+        document.getElementById('modal-name').textContent = denizenName;
+        document.getElementById('modal-action').textContent = action;
+        document.getElementById('modal-location').textContent = location;
+        document.getElementById('modal-district').textContent = district;
+        document.getElementById('modal-timestamp').textContent = new Date().toLocaleTimeString();
+        
+        const avatarImg = document.getElementById('modal-avatar-img');
+        avatarImg.src = `images/${denizenName}.jpg`;
+        avatarImg.onerror = function() {
+            this.src = 'images/default-avatar.jpg';
+        };
+        
+        modal.style.display = 'block';
+    }
+    
+    // Close the modal when clicking the close button
+    closeButton.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+    
+    // Close the modal when clicking outside of it
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+    
+    // Modify the existing function that creates denizen elements
+    function updateActivity() {
+        document.getElementById('loading').style.display = 'flex';
+        
+        fetch('schedulingSim.php')
+            .then(response => response.json())
+            .then(data => {
+                const cityDiv = document.getElementById('city');
+                cityDiv.innerHTML = '';
+                allDistricts = {};
+                
+                if (data.error) {
+                    cityDiv.innerHTML = `<div class="error-message">Error: ${data.error}</div>`;
+                } else {
+                    data.forEach(item => {
+                        if (!allDistricts[item.district_name]) {
+                            allDistricts[item.district_name] = [];
+                        }
+                        allDistricts[item.district_name].push({
+                            name: item.denizen_name,
+                            action: item.action_name,
+                            location: item.location_name
+                        });
+                    });
+                    
+                    // Sort districts alphabetically
+                    const sortedDistricts = Object.entries(allDistricts).sort((a, b) => a[0].localeCompare(b[0]));
+                    
+                    sortedDistricts.forEach(([districtName, denizens]) => {
+                        const districtDiv = document.createElement('div');
+                        districtDiv.classList.add('district');
+                        districtDiv.id = districtName;
+                        districtDiv.style.backgroundImage = `url('districts/${districtName}.jpg')`;
+                        
+                        const overlayDiv = document.createElement('div');
+                        overlayDiv.classList.add('district-overlay');
+                        
+                        const headerDiv = document.createElement('div');
+                        headerDiv.classList.add('district-header');
+                        
+                        const title = document.createElement('h3');
+                        title.textContent = districtName;
+                        
+                        headerDiv.appendChild(title);
+                        
+                        const denizensContainer = document.createElement('div');
+                        denizensContainer.classList.add('denizens-container');
+                        
+                        denizens.forEach(denizen => {
+                            const denizenDiv = document.createElement('div');
+                            denizenDiv.classList.add('denizen');
+                            
+                            // Add click event to open modal
+                            denizenDiv.addEventListener('click', () => {
+                                openDenizenModal(
+                                    denizen.name, 
+                                    denizen.action, 
+                                    denizen.location, 
+                                    districtName
+                                );
+                            });
+                            
+                            const avatarDiv = document.createElement('div');
+                            avatarDiv.classList.add('avatar');
+                            
+                            const img = document.createElement('img');
+                            img.src = `images/${denizen.name}.jpg`;
+                            img.alt = denizen.name;
+                            img.onerror = function() {
+                                this.src = 'images/default-avatar.jpg';
+                            };
+                            
+                            const nameDiv = document.createElement('div');
+                            nameDiv.classList.add('denizen-name');
+                            nameDiv.textContent = denizen.name;
+                            
+                            const actionDiv = document.createElement('div');
+                            actionDiv.classList.add('action');
+                            actionDiv.textContent = `${denizen.action} at ${denizen.location}`;
+                            
+                            avatarDiv.appendChild(img);
+                            denizenDiv.appendChild(avatarDiv);
+                            denizenDiv.appendChild(nameDiv);
+                            denizenDiv.appendChild(actionDiv);
+                            denizensContainer.appendChild(denizenDiv);
+                        });
+                        
+                        const statsDiv = document.createElement('div');
+                        statsDiv.classList.add('district-stats');
+                        statsDiv.innerHTML = `
+                            <div>${denizens.length} citizens</div>
+                            <div>Updated: ${new Date().toLocaleTimeString()}</div>
+                        `;
+                        
+                        overlayDiv.appendChild(headerDiv);
+                        overlayDiv.appendChild(denizensContainer);
+                        overlayDiv.appendChild(statsDiv);
+                        districtDiv.appendChild(overlayDiv);
+                        cityDiv.appendChild(districtDiv);
+                    });
+                    
+                    updateDistrictNav();
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching activity:', error);
+                document.getElementById('city').innerHTML = `
+                    <div class="error-message">
+                        Failed to fetch data. Please try again later.
+                    </div>`;
+            })
+            .finally(() => {
+                document.getElementById('loading').style.display = 'none';
+            });
+    }
 </script>
 </body>
 </html>

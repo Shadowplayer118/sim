@@ -2,7 +2,7 @@
 // denizen_schedule.php
 
 
-    $denizenId = 1;
+    $denizenId = 9;
 
     date_default_timezone_set('Asia/Manila'); // Set to Philippine time
     $hour = intval(date('H')); // Get the current hour as an integer
@@ -10,30 +10,25 @@
     // Variables to store the selected action, location, and district
     $actionId = null;
     
-    
-   
-   
-   
+
     $districtQuery = $pdo->query("SELECT district_id FROM district ORDER BY RAND() LIMIT 1");
     $district = $districtQuery->fetchColumn();
 
     $locationQuery = $pdo->prepare("SELECT location_id FROM location WHERE district_id = :district_id ORDER BY RAND() LIMIT 1");
     $locationQuery->execute(['district_id' => $district]);
     $location = $locationQuery->fetchColumn();
-
-
-
+    
 
 
     if ($hour >= 6 && $hour < 12) {
         $chance = rand(1, 100);
     
-        if ($chance <= 75) {
+        if ($chance <= 50) {
             // 75% chance: Select a random action with type 'Crime'
-            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Art' ORDER BY RAND() LIMIT 1");
+            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Any' ORDER BY RAND() LIMIT 1");
         } else {
             // 25% chance: Select a random action with type 'Art'
-            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Crime' ORDER BY RAND() LIMIT 1");
+            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Social' ORDER BY RAND() LIMIT 1");
         }
     
         $actionId = $actionQuery->fetchColumn();
@@ -46,6 +41,7 @@
 $locationQuery = $pdo->query("SELECT location_id FROM location WHERE type = 'Food' ORDER BY RAND() LIMIT 1");
 $location = $locationQuery->fetchColumn();
 $district=1;
+
 if ($location) {
     // Select a random action associated with the selected location
     $actionQuery = $pdo->prepare("SELECT action_id FROM actions WHERE location_id = :location_id ORDER BY RAND() LIMIT 1");
@@ -60,12 +56,12 @@ if ($location) {
     elseif ($hour >= 13 && $hour < 17) {
         $chance = rand(1, 100);
     
-        if ($chance <= 10) {
+        if ($chance <= 50) {
             // 75% chance: Select a random action with type 'Crime'
-            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Crime' ORDER BY RAND() LIMIT 1");
+            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Any' ORDER BY RAND() LIMIT 1");
         } else {
             // 25% chance: Select a random action with type 'Art'
-            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Art' ORDER BY RAND() LIMIT 1");
+            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Social' ORDER BY RAND() LIMIT 1");
         }
     
         $actionId = $actionQuery->fetchColumn();
@@ -76,12 +72,14 @@ if ($location) {
         // Generate a random number between 1 and 100
         $chance = rand(1, 100);
     
-        if ($chance <= 75) {
+        if ($chance <= 50) {
             // 75% chance: Select a random action with type 'Crime'
-            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Crime' ORDER BY RAND() LIMIT 1");
+            $location=54;
+            $district=4;
+            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Home' ORDER BY RAND() LIMIT 1");
         } else {
             // 25% chance: Select a random action with type 'Art'
-            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Art' ORDER BY RAND() LIMIT 1");
+            $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Social' ORDER BY RAND() LIMIT 1");
         }
     
         $actionId = $actionQuery->fetchColumn();
@@ -89,27 +87,11 @@ if ($location) {
     
     
     else {
-        $chance = rand(1, 100);
-    
-        if ($chance <= 75) {
-            // Generate a second random number for deciding between Crime and Art
-            $subChance = rand(1, 100);
-    
-            if ($subChance <= 75) {
-                // 75% chance: Select a random action with type 'Crime'
-                $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Crime' ORDER BY RAND() LIMIT 1");
-            } else {
-                // 25% chance: Select a random action with type 'Art'
-                $actionQuery = $pdo->query("SELECT action_id FROM actions WHERE type = 'Art' ORDER BY RAND() LIMIT 1");
-            }
-    
-            $actionId = $actionQuery->fetchColumn();
-        } else {
-            // 50% chance: Use fixed values as a fallback
+        
+            $location = 54;
             $actionId = 28;
-            $location = 3;
             $district = 4;
-        }
+        
     }
     
 
