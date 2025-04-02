@@ -12,17 +12,26 @@ try {
 
     // Include the file that runs all the denizen algorithms
     // include 'update_activities.php';
+    include 'conflictGenerator.php';
     include 'scheduleAlgo.php';
 
     // Fetch the updated activity data
     $activityQuery = $pdo->query("
-        SELECT d.name AS denizen_name, a.name AS action_name, ds.name AS district_name, l.name AS location_name 
-        FROM activities 
-        JOIN denizen d ON activities.denizen_id = d.denizen_id
-        JOIN actions a ON activities.action_id = a.action_id
-        JOIN district ds ON activities.district_id = ds.district_id
-        JOIN location l ON activities.location_id = l.location_id
-    ");
+    SELECT 
+        d.name AS denizen_name,
+        d.health AS health,
+        IF(d.Occupied_by = 'conflict', c.name, a.name) AS action_name, 
+        ds.name AS district_name, 
+        l.name AS location_name 
+    FROM activities 
+    JOIN denizen d ON activities.denizen_id = d.denizen_id
+    LEFT JOIN conflict c ON d.Event_id = c.conflict_id
+    JOIN actions a ON activities.action_id = a.action_id
+    JOIN district ds ON activities.district_id = ds.district_id
+    JOIN location l ON activities.location_id = l.location_id
+    ORDER BY activities.location_id ASC, activities.location_id ASC
+");
+
     $activities = $activityQuery->fetchAll(PDO::FETCH_ASSOC);
 
     // Output the updated activity data as JSON

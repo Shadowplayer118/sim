@@ -26,6 +26,7 @@
        // Select a random location with type 'Food'
 $locationQuery = $pdo->query("SELECT location_id FROM location WHERE type = 'Food' ORDER BY RAND() LIMIT 1");
 $location = $locationQuery->fetchColumn();
+$district=1;
 
 if ($location) {
     // Select a random action associated with the selected location

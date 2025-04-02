@@ -4,6 +4,51 @@
     <title>Stray Purgatory - Map View</title>
 
     <style>
+        .health-container {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-top: 10px;
+        }
+        
+        .health-label {
+          font-weight: bold;
+          min-width: 60px;
+        }
+        
+        .health-bar-container {
+          position: relative;
+          width: 250px;
+          height: 10px;
+          background-color: #e0e0e0;
+          border: 2px solid #333;
+          border-radius: 5px;
+          overflow: hidden;
+        }
+        
+        .health-bar-fill {
+          height: 100%;
+          width: 75%; /* Default value, will be set by JavaScript */
+          transition: width 0.3s ease, background-color 0.3s ease;
+          background-color: #2ecc71; /* Default color, will be set by JavaScript */
+        }
+        
+        .health-text {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: light;
+          color: #3d3d3d;
+          text-shadow: 1px 1px 1px rgba(255, 255, 255, 0.5);
+        }
+      </style>
+
+    <style>
         /* Modal Styles */
         .modal {
             display: none;
@@ -422,6 +467,8 @@
             }
         }
     </style>
+
+
 </head>
 <body>
     <div class="app-container">
@@ -460,6 +507,19 @@
             <p><strong>Location:</strong> <span id="modal-location"></span></p>
             <p><strong>District:</strong> <span id="modal-district"></span></p>
             <p><strong>Last Updated:</strong> <span id="modal-timestamp"></span></p>
+            
+            <!-- Remove this text-only health line -->
+            <!-- <p><strong>Health:</strong> <span id="modal-health"></span></p> -->
+
+            <!-- Keep just the graphical health bar -->
+            <div class="health-container">
+                <span class="health-label">Health:</span>
+                <div class="health-bar-container">
+                  <div class="health-bar-fill" id="health-fill"></div>
+                  <div class="health-text" id="health-text">75/100</div>
+                </div>
+            </div>
+            
         </div>
     </div>
 </div>
@@ -544,7 +604,8 @@
                             allDistricts[item.district_name].push({
                                 name: item.denizen_name,
                                 action: item.action_name,
-                                location: item.location_name
+                                location: item.location_name,
+                                health: item.health || Math.floor(Math.random() * 100) + 1 // Default random health if not provided
                             });
                         });
                         
@@ -565,6 +626,8 @@
                             
                             const title = document.createElement('h3');
                             title.textContent = districtName;
+
+                         
                             
                             headerDiv.appendChild(title);
                             
@@ -598,6 +661,17 @@
                                 denizenDiv.appendChild(nameDiv);
                                 denizenDiv.appendChild(actionDiv);
                                 denizensContainer.appendChild(denizenDiv);
+                                
+                                // Add click event to open modal with health data
+                                denizenDiv.addEventListener('click', () => {
+                                    openDenizenModal(
+                                        denizen.name, 
+                                        denizen.action, 
+                                        denizen.location, 
+                                        districtName,
+                                        denizen.health
+                                    );
+                                });
                             });
                             
                             const statsDiv = document.createElement('div');
@@ -682,17 +756,43 @@
 </script>
 
 <script>
+    // Function to update the health bar
+    function updateHealthBar(health) {
+        // Ensure health is between 0 and 100
+        const validHealth = Math.max(0, Math.min(100, parseInt(health) || 0));
+        
+        // Update the width of the health bar
+        const healthFill = document.getElementById('health-fill');
+        healthFill.style.width = validHealth + '%';
+        
+        // Update the text
+        const healthText = document.getElementById('health-text');
+        healthText.textContent = validHealth + '/100';
+        
+        // Update the color based on health value
+        if (validHealth >= 55) {
+            healthFill.style.backgroundColor = '#2ecc71'; // Green
+        } else if (validHealth >= 25) {
+            healthFill.style.backgroundColor = '#f1c40f'; // Yellow
+        } else {
+            healthFill.style.backgroundColor = '#e74c3c'; // Red
+        }
+    }
+    
     // Get the modal element
     const modal = document.getElementById('denizen-modal');
     const closeButton = document.querySelector('.close-button');
     
     // Function to open the modal with denizen details
-    function openDenizenModal(denizenName, action, location, district) {
+    function openDenizenModal(denizenName, action, location, district, health) {
         document.getElementById('modal-name').textContent = denizenName;
         document.getElementById('modal-action').textContent = action;
         document.getElementById('modal-location').textContent = location;
         document.getElementById('modal-district').textContent = district;
         document.getElementById('modal-timestamp').textContent = new Date().toLocaleTimeString();
+        
+        // Update the health bar when opening the modal
+        updateHealthBar(health);
         
         const avatarImg = document.getElementById('modal-avatar-img');
         avatarImg.src = `images/${denizenName}.jpg`;
@@ -714,122 +814,6 @@
             modal.style.display = 'none';
         }
     });
-    
-    // Modify the existing function that creates denizen elements
-    function updateActivity() {
-        document.getElementById('loading').style.display = 'flex';
-        
-        fetch('schedulingSim.php')
-            .then(response => response.json())
-            .then(data => {
-                const cityDiv = document.getElementById('city');
-                cityDiv.innerHTML = '';
-                allDistricts = {};
-                
-                if (data.error) {
-                    cityDiv.innerHTML = `<div class="error-message">Error: ${data.error}</div>`;
-                } else {
-                    data.forEach(item => {
-                        if (!allDistricts[item.district_name]) {
-                            allDistricts[item.district_name] = [];
-                        }
-                        allDistricts[item.district_name].push({
-                            name: item.denizen_name,
-                            action: item.action_name,
-                            location: item.location_name
-                        });
-                    });
-                    
-                    // Sort districts alphabetically
-                    const sortedDistricts = Object.entries(allDistricts).sort((a, b) => a[0].localeCompare(b[0]));
-                    
-                    sortedDistricts.forEach(([districtName, denizens]) => {
-                        const districtDiv = document.createElement('div');
-                        districtDiv.classList.add('district');
-                        districtDiv.id = districtName;
-                        districtDiv.style.backgroundImage = `url('districts/${districtName}.jpg')`;
-                        
-                        const overlayDiv = document.createElement('div');
-                        overlayDiv.classList.add('district-overlay');
-                        
-                        const headerDiv = document.createElement('div');
-                        headerDiv.classList.add('district-header');
-                        
-                        const title = document.createElement('h3');
-                        title.textContent = districtName;
-                        
-                        headerDiv.appendChild(title);
-                        
-                        const denizensContainer = document.createElement('div');
-                        denizensContainer.classList.add('denizens-container');
-                        
-                        denizens.forEach(denizen => {
-                            const denizenDiv = document.createElement('div');
-                            denizenDiv.classList.add('denizen');
-                            
-                            // Add click event to open modal
-                            denizenDiv.addEventListener('click', () => {
-                                openDenizenModal(
-                                    denizen.name, 
-                                    denizen.action, 
-                                    denizen.location, 
-                                    districtName
-                                );
-                            });
-                            
-                            const avatarDiv = document.createElement('div');
-                            avatarDiv.classList.add('avatar');
-                            
-                            const img = document.createElement('img');
-                            img.src = `images/${denizen.name}.jpg`;
-                            img.alt = denizen.name;
-                            img.onerror = function() {
-                                this.src = 'images/default-avatar.jpg';
-                            };
-                            
-                            const nameDiv = document.createElement('div');
-                            nameDiv.classList.add('denizen-name');
-                            nameDiv.textContent = denizen.name;
-                            
-                            const actionDiv = document.createElement('div');
-                            actionDiv.classList.add('action');
-                            actionDiv.textContent = `${denizen.action} at ${denizen.location}`;
-                            
-                            avatarDiv.appendChild(img);
-                            denizenDiv.appendChild(avatarDiv);
-                            denizenDiv.appendChild(nameDiv);
-                            denizenDiv.appendChild(actionDiv);
-                            denizensContainer.appendChild(denizenDiv);
-                        });
-                        
-                        const statsDiv = document.createElement('div');
-                        statsDiv.classList.add('district-stats');
-                        statsDiv.innerHTML = `
-                            <div>${denizens.length} citizens</div>
-                            <div>Updated: ${new Date().toLocaleTimeString()}</div>
-                        `;
-                        
-                        overlayDiv.appendChild(headerDiv);
-                        overlayDiv.appendChild(denizensContainer);
-                        overlayDiv.appendChild(statsDiv);
-                        districtDiv.appendChild(overlayDiv);
-                        cityDiv.appendChild(districtDiv);
-                    });
-                    
-                    updateDistrictNav();
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching activity:', error);
-                document.getElementById('city').innerHTML = `
-                    <div class="error-message">
-                        Failed to fetch data. Please try again later.
-                    </div>`;
-            })
-            .finally(() => {
-                document.getElementById('loading').style.display = 'none';
-            });
-    }
 </script>
 </body>
 </html>

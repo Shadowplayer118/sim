@@ -9,6 +9,7 @@
 
     // Variables to store the selected action, location, and district
     $actionId = null;
+   
     
     
 
@@ -25,6 +26,7 @@
     elseif ($hour >= 12 && $hour < 13) {
        // Select a random location with type 'Food'
 $locationQuery = $pdo->query("SELECT location_id FROM location WHERE type = 'Food' ORDER BY RAND() LIMIT 1");
+$district=1;
 $location = $locationQuery->fetchColumn();
 
 if ($location) {
